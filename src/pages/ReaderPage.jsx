@@ -6,7 +6,8 @@ import PdfViewport from '../components/reader/PdfViewport';
 import ReaderToolbar from '../components/reader/ReaderToolbar';
 import SearchPanel from '../components/reader/SearchPanel';
 import TocDrawer from '../components/reader/TocDrawer';
-import { getProgress, saveProgress } from '../lib/storage/progress';
+import BookmarkPopover from '../components/reader/BookmarkPopover';
+import { getProgress, saveProgress, getBookmarks, toggleBookmark } from '../lib/storage/progress';
 import { getTheme } from '../lib/themes/themeDefinitions';
 
 export default function ReaderPage({ file, onClose }) {
@@ -20,6 +21,8 @@ export default function ReaderPage({ file, onClose }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [tocOpen, setTocOpen] = useState(false);
   const [hasOutline, setHasOutline] = useState(false);
+  const [bookmarks, setBookmarks] = useState(() => getBookmarks(file));
+  const [bookmarksOpen, setBookmarksOpen] = useState(false);
   const reader = useRef(null);
   const settingsRef = useRef(settings);
   const previewFrame = useRef();
@@ -86,6 +89,7 @@ export default function ReaderPage({ file, onClose }) {
         setSettings((value) => { const preset = getTheme(item); return { ...value, theme: item, brightness: preset.brightness, contrast: preset.contrast, temperature: preset.temperature }; });
       }
       if (event.key === 'g') document.querySelector('.page-jump input')?.focus();
+      if (event.key === 'b') { setBookmarks(toggleBookmark(file, page)); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -98,7 +102,8 @@ export default function ReaderPage({ file, onClose }) {
     <header className="reader-header"><button className="back-button" onClick={onClose}>← <span>Library</span></button><div className="reader-file"><span>{file.name}</span><small>{APP_NAME} · private on-device reading</small></div><div className="header-progress">Page {page} / {pages}<span>{Math.round((page / pages) * 100)}%</span></div></header>
     {searchOpen && <SearchPanel pdf={pdf} onJump={(next) => { goToPage(next); }} onClose={() => { setSearchOpen(false); setSearchQuery(''); }} onQueryChange={setSearchQuery} />}
     {tocOpen && <TocDrawer pdf={pdf} onJump={(next) => { goToPage(next); setTocOpen(false); }} onClose={() => setTocOpen(false)} onOutlineAvailable={setHasOutline} />}
+    {bookmarksOpen && <BookmarkPopover bookmarks={bookmarks} onJump={goToPage} onClose={() => setBookmarksOpen(false)} />}
     <PdfViewport pdf={pdf} settings={settings} onPageChange={setPage} startPage={targetPage} searchQuery={searchQuery} />
-    <ReaderToolbar settings={settings} setSettings={setSettings} page={page} pages={pages} goToPage={goToPage} toggleFocus={() => setFocus((value) => !value)} focus={focus} toggleFullscreen={toggleFullscreen} searchOpen={searchOpen} setSearchOpen={setSearchOpen} onPreview={applyPreview} hasOutline={hasOutline} tocOpen={tocOpen} setTocOpen={setTocOpen} />
+    <ReaderToolbar settings={settings} setSettings={setSettings} page={page} pages={pages} goToPage={goToPage} toggleFocus={() => setFocus((value) => !value)} focus={focus} toggleFullscreen={toggleFullscreen} searchOpen={searchOpen} setSearchOpen={setSearchOpen} onPreview={applyPreview} hasOutline={hasOutline} tocOpen={tocOpen} setTocOpen={setTocOpen} bookmarks={bookmarks} isPageBookmarked={bookmarks.includes(page)} onToggleBookmark={() => setBookmarks(toggleBookmark(file, page))} bookmarksOpen={bookmarksOpen} setBookmarksOpen={setBookmarksOpen} />
   </main>;
 }
