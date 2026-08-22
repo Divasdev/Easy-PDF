@@ -25,6 +25,7 @@ never leave the user’s device. It uses React 18, Vite, Tailwind CSS, and raw
 - [x] Phase 4 — Text search by PDF page
 - [x] Phase 5 — Preferences and reading progress
 - [x] Phase 6 — Responsive UI, focus mode, reduced motion, errors, README
+- [ ] Phase 7 — Research-driven refinement: search highlighting, ToC, bookmarks, copy
 
 ### Session Notes
 

@@ -16,6 +16,7 @@ export default function ReaderPage({ file, onClose }) {
   const [targetPage, setTargetPage] = useState(saved?.lastPage || 1);
   const [focus, setFocus] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const reader = useRef(null);
   const settingsRef = useRef(settings);
   const previewFrame = useRef();
@@ -58,7 +59,7 @@ export default function ReaderPage({ file, onClose }) {
       if (event.key === '-') setSettings((value) => ({ ...value, zoom: Math.max(.6, +(value.zoom - .1).toFixed(1)) }));
       if (event.key === '0') setSettings((value) => ({ ...value, zoom: 1 }));
       if (event.key === '/') { event.preventDefault(); setSearchOpen(true); }
-      if (event.key === 'Escape') { setSearchOpen(false); if (document.fullscreenElement) document.exitFullscreen(); }
+      if (event.key === 'Escape') { setSearchOpen(false); setSearchQuery(''); if (document.fullscreenElement) document.exitFullscreen(); }
       if (event.key === 'f') toggleFullscreen();
       if (event.key === 'F') setFocus((value) => !value);
       if (event.key === 't') setSettings((value) => {
@@ -84,8 +85,8 @@ export default function ReaderPage({ file, onClose }) {
 
   return <main ref={reader} className={`reader-shell ${focus ? 'focus-mode' : ''}`}>
     <header className="reader-header"><button className="back-button" onClick={onClose}>← <span>Library</span></button><div className="reader-file"><span>{file.name}</span><small>{APP_NAME} · private on-device reading</small></div><div className="header-progress">Page {page} / {pages}<span>{Math.round((page / pages) * 100)}%</span></div></header>
-    {searchOpen && <SearchPanel pdf={pdf} onJump={(next) => { goToPage(next); setSearchOpen(false); }} onClose={() => setSearchOpen(false)} />}
-    <PdfViewport pdf={pdf} settings={settings} onPageChange={setPage} startPage={targetPage} />
+    {searchOpen && <SearchPanel pdf={pdf} onJump={(next) => { goToPage(next); }} onClose={() => { setSearchOpen(false); setSearchQuery(''); }} onQueryChange={setSearchQuery} />}
+    <PdfViewport pdf={pdf} settings={settings} onPageChange={setPage} startPage={targetPage} searchQuery={searchQuery} />
     <ReaderToolbar settings={settings} setSettings={setSettings} page={page} pages={pages} goToPage={goToPage} toggleFocus={() => setFocus((value) => !value)} focus={focus} toggleFullscreen={toggleFullscreen} searchOpen={searchOpen} setSearchOpen={setSearchOpen} onPreview={applyPreview} />
   </main>;
 }

@@ -13,11 +13,26 @@ function rememberSource(key, source) {
   if (sourceCache.size > MAX_SOURCE_CACHE) sourceCache.delete(sourceCache.keys().next().value);
 }
 
-export default function PdfCanvasPage({ pdf, pageNumber, settings, onVisible }) {
+/** Mark matching text spans with highlight classes. */
+function applyHighlights(container, query) {
+  if (!container) return;
+  const spans = container.querySelectorAll('span');
+  const needle = query?.trim().toLocaleLowerCase();
+  spans.forEach((span) => {
+    span.classList.remove('text-layer-highlight');
+    if (needle && span.textContent.toLocaleLowerCase().includes(needle)) {
+      span.classList.add('text-layer-highlight');
+    }
+  });
+}
+
+export default function PdfCanvasPage({ pdf, pageNumber, settings, onVisible, searchQuery }) {
   const host = useRef(null);
   const canvas = useRef(null);
+  const textLayer = useRef(null);
   const [inView, setInView] = useState(false);
   const [aspectRatio, setAspectRatio] = useState(1.414);
+  const lastCssScale = useRef(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {
@@ -51,13 +66,47 @@ export default function PdfCanvasPage({ pdf, pageNumber, settings, onVisible }) 
       paintReadingCanvas(source, canvas.current, settings, key);
       canvas.current.style.width = `${viewport.width / dpr}px`;
       canvas.current.style.height = `${viewport.height / dpr}px`;
+
+      /* Build the text layer overlay for selection and highlighting. */
+      if (textLayer.current && cssScale !== lastCssScale.current) {
+        lastCssScale.current = cssScale;
+        textLayer.current.innerHTML = '';
+        textLayer.current.style.width = `${viewport.width / dpr}px`;
+        textLayer.current.style.height = `${viewport.height / dpr}px`;
+        const content = await page.getTextContent();
+        if (cancelled) return;
+        const cssViewport = page.getViewport({ scale: cssScale });
+        content.items.forEach((item) => {
+          if (!item.str) return;
+          const tx = item.transform;
+          const span = document.createElement('span');
+          span.textContent = item.str;
+          const fontSize = Math.sqrt(tx[0] * tx[0] + tx[1] * tx[1]);
+          const scaledFontSize = fontSize * cssScale;
+          /* tx[4],tx[5] are the x,y in unscaled page coordinates.
+             PDF y-axis is bottom-up; CSS is top-down, so we flip. */
+          const left = tx[4] * cssScale;
+          const top = cssViewport.height - tx[5] * cssScale - scaledFontSize;
+          span.style.cssText = `position:absolute;left:${left}px;top:${top}px;font-size:${scaledFontSize}px;transform:scaleX(${item.width ? (item.width * cssScale) / (item.str.length * scaledFontSize * 0.5) : 1});transform-origin:left bottom;`;
+          textLayer.current.appendChild(span);
+        });
+        applyHighlights(textLayer.current, searchQuery);
+      }
     };
     render().catch(() => {});
     return () => { cancelled = true; };
   }, [pdf, pageNumber, inView, settings.theme, settings.brightness, settings.contrast, settings.temperature, settings.zoom]);
 
+  /* Re-apply highlights when searchQuery changes (without re-rendering the text layer). */
+  useEffect(() => {
+    applyHighlights(textLayer.current, searchQuery);
+  }, [searchQuery]);
+
   return <article ref={host} id={`page-${pageNumber}`} className="pdf-page" style={{ aspectRatio: 1 / (aspectRatio * settings.zoom) }} aria-label={`PDF page ${pageNumber}`}>
-    {inView ? <canvas ref={canvas} /> : <div className="page-skeleton">Page {pageNumber}</div>}
+    {inView ? <>
+      <canvas ref={canvas} />
+      <div ref={textLayer} className="text-layer" />
+    </> : <div className="page-skeleton">Page {pageNumber}</div>}
     <span className="page-number">{pageNumber}</span>
   </article>;
 }
