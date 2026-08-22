@@ -30,3 +30,6 @@ never leave the user’s device. It uses React 18, Vite, Tailwind CSS, and raw
 
 - 2026-08-22: Built the first EasyReadPDF version. Next up: verify with a real
   technical PDF and deploy the Vite site from this repository.
+- 2026-08-22: Reader refinement: source-page LRU reuse, debounced comfort
+  rendering with immediate preview feedback, temperature control, presets,
+  tooltips, minimized upper-corner panel, and a research-led landing page.

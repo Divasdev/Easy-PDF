@@ -17,7 +17,18 @@ export default function ReaderPage({ file, onClose }) {
   const [focus, setFocus] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const reader = useRef(null);
+  const settingsRef = useRef(settings);
+  const previewFrame = useRef();
   const pages = pdf?.numPages || 0;
+  settingsRef.current = settings;
+  const applyPreview = useCallback((draft) => {
+    cancelAnimationFrame(previewFrame.current);
+    previewFrame.current = requestAnimationFrame(() => {
+      const committed = settingsRef.current;
+      reader.current?.style.setProperty('--preview-brightness', String(draft.brightness / committed.brightness));
+      reader.current?.style.setProperty('--preview-contrast', String((0.35 + draft.contrast * .0095) / (0.35 + committed.contrast * .0095)));
+    });
+  }, []);
 
   useEffect(() => {
     if (!pdf) return undefined;
@@ -52,15 +63,15 @@ export default function ReaderPage({ file, onClose }) {
       if (event.key === 'F') setFocus((value) => !value);
       if (event.key === 't') setSettings((value) => {
         const next = ['original', 'warm', 'sepia', 'dark', 'soft-blue'][(['original', 'warm', 'sepia', 'dark', 'soft-blue'].indexOf(value.theme) + 1) % 5];
-        const preset = getTheme(next); return { ...value, theme: next, brightness: preset.brightness, contrast: preset.contrast };
+        const preset = getTheme(next); return { ...value, theme: next, brightness: preset.brightness, contrast: preset.contrast, temperature: preset.temperature };
       });
       if (event.key === 'o') setSettings((value) => {
         const next = value.theme === 'original' ? 'warm' : 'original'; const preset = getTheme(next);
-        return { ...value, theme: next, brightness: preset.brightness, contrast: preset.contrast };
+        return { ...value, theme: next, brightness: preset.brightness, contrast: preset.contrast, temperature: preset.temperature };
       });
       if (/^[1-5]$/.test(event.key)) {
         const item = ['original', 'warm', 'sepia', 'dark', 'soft-blue'][Number(event.key) - 1];
-        setSettings((value) => { const preset = getTheme(item); return { ...value, theme: item, brightness: preset.brightness, contrast: preset.contrast }; });
+        setSettings((value) => { const preset = getTheme(item); return { ...value, theme: item, brightness: preset.brightness, contrast: preset.contrast, temperature: preset.temperature }; });
       }
       if (event.key === 'g') document.querySelector('.page-jump input')?.focus();
     };
@@ -75,6 +86,6 @@ export default function ReaderPage({ file, onClose }) {
     <header className="reader-header"><button className="back-button" onClick={onClose}>← <span>Library</span></button><div className="reader-file"><span>{file.name}</span><small>{APP_NAME} · private on-device reading</small></div><div className="header-progress">Page {page} / {pages}<span>{Math.round((page / pages) * 100)}%</span></div></header>
     {searchOpen && <SearchPanel pdf={pdf} onJump={(next) => { goToPage(next); setSearchOpen(false); }} onClose={() => setSearchOpen(false)} />}
     <PdfViewport pdf={pdf} settings={settings} onPageChange={setPage} startPage={targetPage} />
-    <ReaderToolbar settings={settings} setSettings={setSettings} page={page} pages={pages} goToPage={goToPage} toggleFocus={() => setFocus((value) => !value)} focus={focus} toggleFullscreen={toggleFullscreen} searchOpen={searchOpen} setSearchOpen={setSearchOpen} />
+    <ReaderToolbar settings={settings} setSettings={setSettings} page={page} pages={pages} goToPage={goToPage} toggleFocus={() => setFocus((value) => !value)} focus={focus} toggleFullscreen={toggleFullscreen} searchOpen={searchOpen} setSearchOpen={setSearchOpen} onPreview={applyPreview} />
   </main>;
 }

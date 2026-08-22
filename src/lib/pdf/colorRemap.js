@@ -38,6 +38,7 @@ export function paintReadingCanvas(source, target, settings, cacheKey) {
   const { data } = image;
   const brightness = settings.brightness / 100;
   const contrast = 0.35 + (settings.contrast / 100) * 0.95;
+  const temperature = ((settings.temperature ?? 50) - 50) / 50;
 
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i]; const g = data[i + 1]; const b = data[i + 2];
@@ -54,9 +55,13 @@ export function paintReadingCanvas(source, target, settings, cacheKey) {
       structural[1] * (1 - blend) + g * blend,
       structural[2] * (1 - blend) + b * blend,
     ];
-    data[i] = clamp(((mixed[0] / 255 - 0.5) * contrast + 0.5) * 255 * brightness);
-    data[i + 1] = clamp(((mixed[1] / 255 - 0.5) * contrast + 0.5) * 255 * brightness);
-    data[i + 2] = clamp(((mixed[2] / 255 - 0.5) * contrast + 0.5) * 255 * brightness);
+    // Temperature is weighted toward structural pixels; coloured diagrams only get a gentle nudge.
+    const temperatureWeight = 1 - blend * 0.72;
+    const warm = temperature * temperatureWeight;
+    const adjusted = [mixed[0] + warm * 16, mixed[1] + warm * 3, mixed[2] - warm * 22];
+    data[i] = clamp(((adjusted[0] / 255 - 0.5) * contrast + 0.5) * 255 * brightness);
+    data[i + 1] = clamp(((adjusted[1] / 255 - 0.5) * contrast + 0.5) * 255 * brightness);
+    data[i + 2] = clamp(((adjusted[2] / 255 - 0.5) * contrast + 0.5) * 255 * brightness);
   }
   ctx.putImageData(image, 0, 0);
   const snapshot = document.createElement('canvas');

@@ -1,49 +1,43 @@
-import { useEffect, useState } from 'react';
-import { themes, getTheme } from '../../lib/themes/themeDefinitions';
+import { useEffect, useRef, useState } from 'react';
+import { getTheme, readingPresets, themes } from '../../lib/themes/themeDefinitions';
 
 function IconButton({ label, onClick, children, disabled = false, active = false }) {
-  return <button className={`tool-icon ${active ? 'active' : ''}`} type="button" onClick={onClick} disabled={disabled} aria-label={label} title={label}>{children}</button>;
+  return <button className={`tool-icon has-tooltip ${active ? 'active' : ''}`} type="button" onClick={onClick} disabled={disabled} aria-label={label} data-tooltip={label}>{children}</button>;
 }
 
-export default function ReaderToolbar({ settings, setSettings, page, pages, goToPage, toggleFocus, focus, toggleFullscreen, searchOpen, setSearchOpen }) {
-  const [expanded, setExpanded] = useState(true);
+export default function ReaderToolbar({ settings, setSettings, page, pages, goToPage, toggleFocus, focus, toggleFullscreen, searchOpen, setSearchOpen, onPreview }) {
+  const [expanded, setExpanded] = useState(false);
   const [pageInput, setPageInput] = useState(String(page));
+  const [draft, setDraft] = useState(settings);
+  const commitTimer = useRef();
   useEffect(() => setPageInput(String(page)), [page]);
-  const theme = getTheme(settings.theme);
-  const custom = settings.theme !== 'original' && (settings.brightness !== theme.brightness || settings.contrast !== theme.contrast);
-  const chooseTheme = (id) => {
-    const selection = getTheme(id);
-    setSettings((old) => ({ ...old, theme: id, brightness: selection.brightness, contrast: selection.contrast }));
-  };
-  const adjust = (key, value) => setSettings((old) => ({ ...old, [key]: Number(value) }));
-  return <div className={`reader-toolbar ${expanded ? 'expanded' : ''}`}>
-    <div className="toolbar-row primary-tools">
-      <IconButton label="Previous page" onClick={() => goToPage(page - 1)} disabled={page <= 1}>←</IconButton>
-      <form onSubmit={(event) => { event.preventDefault(); goToPage(Number(pageInput)); }} className="page-jump">
-        <input aria-label="Go to page" value={pageInput} onChange={(event) => setPageInput(event.target.value)} inputMode="numeric" /> <span>/ {pages}</span>
-      </form>
-      <IconButton label="Next page" onClick={() => goToPage(page + 1)} disabled={page >= pages}>→</IconButton>
-      <span className="tool-divider" />
-      <IconButton label="Zoom out" onClick={() => adjust('zoom', Math.max(.6, +(settings.zoom - .1).toFixed(1)))}>−</IconButton>
-      <span className="zoom-label">{Math.round(settings.zoom * 100)}%</span>
-      <IconButton label="Zoom in" onClick={() => adjust('zoom', Math.min(2.2, +(settings.zoom + .1).toFixed(1)))}>+</IconButton>
-      <span className="tool-divider" />
-      <IconButton label="Search PDF" onClick={() => setSearchOpen(!searchOpen)} active={searchOpen}>⌕</IconButton>
-      <IconButton label="Fullscreen" onClick={toggleFullscreen}>⛶</IconButton>
-      <IconButton label="Focus mode" onClick={toggleFocus} active={focus}>◉</IconButton>
-    </div>
-    <button type="button" className="appearance-toggle" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded}>
-      <span>{theme.name}{custom ? ' · Custom' : ''}</span><span aria-hidden="true">{expanded ? '⌄' : '⌃'}</span>
-    </button>
-    {expanded && <div className="appearance-panel">
-      <div className="theme-options" role="group" aria-label="Reading theme">
-        {themes.map((item) => <button type="button" key={item.id} onClick={() => chooseTheme(item.id)} className={item.id === settings.theme ? 'selected' : ''}><i style={{ background: item.bg, borderColor: item.ink }} />{item.name}</button>)}
-      </div>
-      {settings.theme !== 'original' && <>
-        <label className="reading-slider"><span>☼ Reading brightness <output>{settings.brightness}%</output></span><input type="range" min="25" max="115" value={settings.brightness} onChange={(event) => adjust('brightness', event.target.value)} /></label>
-        <label className="reading-slider"><span>◐ Contrast <output>{settings.contrast}%</output></span><input type="range" min="25" max="115" value={settings.contrast} onChange={(event) => adjust('contrast', event.target.value)} /></label>
-        {custom && <button type="button" className="reset-adjustments" onClick={() => chooseTheme(settings.theme)}>Reset adjustments</button>}
+  useEffect(() => { setDraft(settings); onPreview?.(settings); }, [settings, onPreview]);
+  useEffect(() => () => clearTimeout(commitTimer.current), []);
+
+  const commit = (next) => { clearTimeout(commitTimer.current); commitTimer.current = setTimeout(() => setSettings((old) => ({ ...old, ...next })), 180); };
+  const adjust = (key, value) => { const next = { ...draft, [key]: Number(value) }; setDraft(next); onPreview?.(next); commit(next); };
+  const apply = (next) => { clearTimeout(commitTimer.current); setDraft(next); onPreview?.(next); setSettings((old) => ({ ...old, ...next })); };
+  const chooseTheme = (id) => { const selection = getTheme(id); apply({ ...draft, theme: id, brightness: selection.brightness, contrast: selection.contrast, temperature: selection.temperature }); };
+  const selectedPreset = readingPresets.find((preset) => ['theme', 'brightness', 'contrast', 'temperature'].every((key) => preset[key] === draft[key]));
+
+  return <>
+    <aside className={`reading-panel ${expanded ? 'is-expanded' : 'is-minimized'}`} aria-label="Reading controls">
+      {!expanded ? <button type="button" className="reading-panel-launch has-tooltip" onClick={() => setExpanded(true)} aria-label="Open reading controls" data-tooltip="Reading controls">☼</button> : <>
+        <div className="reading-panel-heading"><span>Reading comfort</span><button type="button" className="has-tooltip" onClick={() => setExpanded(false)} aria-label="Minimize reading controls" data-tooltip="Minimize controls">−</button></div>
+        <div className="comfort-group"><span className="control-label">Quick preset <em>{selectedPreset ? selectedPreset.name : 'Custom'}</em></span><div className="preset-options">{readingPresets.map((preset) => <button type="button" key={preset.id} className={selectedPreset?.id === preset.id ? 'selected' : ''} onClick={() => apply({ ...draft, theme: preset.theme, brightness: preset.brightness, contrast: preset.contrast, temperature: preset.temperature })}>{preset.icon}<span>{preset.name}</span></button>)}</div></div>
+        <div className="comfort-group"><span className="control-label">Theme</span><div className="theme-options" role="group" aria-label="Reading theme">{themes.map((item) => <button type="button" key={item.id} onClick={() => chooseTheme(item.id)} className={item.id === draft.theme ? 'selected' : ''}><i style={{ background: item.bg, borderColor: item.ink }} />{item.name}</button>)}</div></div>
+        {draft.theme !== 'original' && <div className="comfort-group sliders">
+          <label className="reading-slider"><span>☼ Brightness <output>{draft.brightness}%</output></span><input type="range" min="25" max="115" value={draft.brightness} onChange={(event) => adjust('brightness', event.target.value)} /></label>
+          <label className="reading-slider"><span>◐ Contrast <output>{draft.contrast}%</output></span><input type="range" min="25" max="115" value={draft.contrast} onChange={(event) => adjust('contrast', event.target.value)} /></label>
+          <label className="reading-slider"><span>◌ Color temperature <output>{draft.temperature < 50 ? 'Cool' : draft.temperature > 50 ? 'Warm' : 'Neutral'}</output></span><div className="temperature-range"><small>Cool</small><input aria-label="Color temperature" type="range" min="0" max="100" value={draft.temperature} onChange={(event) => adjust('temperature', event.target.value)} /><small>Warm</small></div></label>
+          <button type="button" className="reset-adjustments" onClick={() => chooseTheme(draft.theme)}>Reset adjustments</button>
+        </div>}
       </>}
-    </div>}
-  </div>;
+    </aside>
+    <nav className="reader-navigation" aria-label="Page controls">
+      <IconButton label="Previous page · Left arrow" onClick={() => goToPage(page - 1)} disabled={page <= 1}>←</IconButton><form onSubmit={(event) => { event.preventDefault(); goToPage(Number(pageInput)); }} className="page-jump"><input aria-label="Go to page · G" value={pageInput} onChange={(event) => setPageInput(event.target.value)} inputMode="numeric" /> <span>/ {pages}</span></form><IconButton label="Next page · Right arrow" onClick={() => goToPage(page + 1)} disabled={page >= pages}>→</IconButton><span className="tool-divider" />
+      <IconButton label="Zoom out · Minus" onClick={() => apply({ ...draft, zoom: Math.max(.6, +(draft.zoom - .1).toFixed(1)) })}>−</IconButton><span className="zoom-label">{Math.round(draft.zoom * 100)}%</span><IconButton label="Zoom in · Plus" onClick={() => apply({ ...draft, zoom: Math.min(2.2, +(draft.zoom + .1).toFixed(1)) })}>+</IconButton><span className="tool-divider" />
+      <IconButton label="Search document · /" onClick={() => setSearchOpen(!searchOpen)} active={searchOpen}>⌕</IconButton><IconButton label="Fullscreen · F" onClick={toggleFullscreen}>⛶</IconButton><IconButton label="Focus mode · Shift F" onClick={toggleFocus} active={focus}>◉</IconButton>
+    </nav>
+  </>;
 }
