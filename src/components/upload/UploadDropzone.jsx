@@ -21,7 +21,7 @@ export default function UploadDropzone({ onOpen }) {
       <span className="upload-icon" aria-hidden="true">↥</span>
       <span className="dropzone-title">Drop a PDF here</span>
       <span className="dropzone-copy">or choose a file from your device</span>
-      <span className="dropzone-button">Choose PDF</span>
+      <span className="dropzone-button">Read a PDF</span>
     </button>
     <input ref={input} className="sr-only" type="file" accept="application/pdf,.pdf" onChange={(event) => choose(event.target.files[0])} />
   </>;
