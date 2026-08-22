@@ -25,7 +25,7 @@ never leave the user’s device. It uses React 18, Vite, Tailwind CSS, and raw
 - [x] Phase 4 — Text search by PDF page
 - [x] Phase 5 — Preferences and reading progress
 - [x] Phase 6 — Responsive UI, focus mode, reduced motion, errors, README
-- [ ] Phase 7 — Research-driven refinement: search highlighting, ToC, bookmarks, copy
+- [x] Phase 7 — Research-driven refinement: search highlighting, ToC, bookmarks, copy
 
 ### Session Notes
 
@@ -34,3 +34,9 @@ never leave the user’s device. It uses React 18, Vite, Tailwind CSS, and raw
 - 2026-08-22: Reader refinement: source-page LRU reuse, debounced comfort
   rendering with immediate preview feedback, temperature control, presets,
   tooltips, minimized upper-corner panel, and a research-led landing page.
+- 2026-08-22: Phase 7 research-driven refinement. Zoom stability verified
+  correct by construction. Added text layer overlay for search highlighting
+  with next/prev navigation. Table of contents drawer using pdf.getOutline()
+  (hidden when PDF has no outline). Page bookmarking with localStorage
+  persistence and popover navigation. Landing CTA aligned to "Read a PDF".
+  Health claims audit passed — no medical language anywhere in UI.
