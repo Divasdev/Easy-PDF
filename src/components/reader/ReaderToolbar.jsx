@@ -5,7 +5,7 @@ function IconButton({ label, onClick, children, disabled = false, active = false
   return <button className={`tool-icon has-tooltip ${active ? 'active' : ''}`} type="button" onClick={onClick} disabled={disabled} aria-label={label} data-tooltip={label}>{children}</button>;
 }
 
-export default function ReaderToolbar({ settings, setSettings, page, pages, goToPage, toggleFocus, focus, toggleFullscreen, searchOpen, setSearchOpen, onPreview }) {
+export default function ReaderToolbar({ settings, setSettings, page, pages, goToPage, toggleFocus, focus, toggleFullscreen, searchOpen, setSearchOpen, onPreview, hasOutline, tocOpen, setTocOpen }) {
   const [expanded, setExpanded] = useState(false);
   const [pageInput, setPageInput] = useState(String(page));
   const [draft, setDraft] = useState(settings);
@@ -37,7 +37,7 @@ export default function ReaderToolbar({ settings, setSettings, page, pages, goTo
     <nav className="reader-navigation" aria-label="Page controls">
       <IconButton label="Previous page · Left arrow" onClick={() => goToPage(page - 1)} disabled={page <= 1}>←</IconButton><form onSubmit={(event) => { event.preventDefault(); goToPage(Number(pageInput)); }} className="page-jump"><input aria-label="Go to page · G" value={pageInput} onChange={(event) => setPageInput(event.target.value)} inputMode="numeric" /> <span>/ {pages}</span></form><IconButton label="Next page · Right arrow" onClick={() => goToPage(page + 1)} disabled={page >= pages}>→</IconButton><span className="tool-divider" />
       <IconButton label="Zoom out · Minus" onClick={() => apply({ ...draft, zoom: Math.max(.6, +(draft.zoom - .1).toFixed(1)) })}>−</IconButton><span className="zoom-label">{Math.round(draft.zoom * 100)}%</span><IconButton label="Zoom in · Plus" onClick={() => apply({ ...draft, zoom: Math.min(2.2, +(draft.zoom + .1).toFixed(1)) })}>+</IconButton><span className="tool-divider" />
-      <IconButton label="Search document · /" onClick={() => setSearchOpen(!searchOpen)} active={searchOpen}>⌕</IconButton><IconButton label="Fullscreen · F" onClick={toggleFullscreen}>⛶</IconButton><IconButton label="Focus mode · Shift F" onClick={toggleFocus} active={focus}>◉</IconButton>
+      <IconButton label="Search document · /" onClick={() => setSearchOpen(!searchOpen)} active={searchOpen}>⌕</IconButton>{hasOutline && <IconButton label="Table of contents" onClick={() => setTocOpen(!tocOpen)} active={tocOpen}>☰</IconButton>}<IconButton label="Fullscreen · F" onClick={toggleFullscreen}>⛶</IconButton><IconButton label="Focus mode · Shift F" onClick={toggleFocus} active={focus}>◉</IconButton>
     </nav>
   </>;
 }

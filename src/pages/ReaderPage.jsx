@@ -5,6 +5,7 @@ import { useReaderPreferences } from '../hooks/useReaderPreferences';
 import PdfViewport from '../components/reader/PdfViewport';
 import ReaderToolbar from '../components/reader/ReaderToolbar';
 import SearchPanel from '../components/reader/SearchPanel';
+import TocDrawer from '../components/reader/TocDrawer';
 import { getProgress, saveProgress } from '../lib/storage/progress';
 import { getTheme } from '../lib/themes/themeDefinitions';
 
@@ -17,6 +18,8 @@ export default function ReaderPage({ file, onClose }) {
   const [focus, setFocus] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [tocOpen, setTocOpen] = useState(false);
+  const [hasOutline, setHasOutline] = useState(false);
   const reader = useRef(null);
   const settingsRef = useRef(settings);
   const previewFrame = useRef();
@@ -30,6 +33,14 @@ export default function ReaderPage({ file, onClose }) {
       reader.current?.style.setProperty('--preview-contrast', String((0.35 + draft.contrast * .0095) / (0.35 + committed.contrast * .0095)));
     });
   }, []);
+
+  /* Eagerly probe for an outline so the ToC button can show/hide immediately. */
+  useEffect(() => {
+    if (!pdf) return;
+    pdf.getOutline().then((result) => {
+      setHasOutline(Array.isArray(result) && result.length > 0);
+    }).catch(() => setHasOutline(false));
+  }, [pdf]);
 
   useEffect(() => {
     if (!pdf) return undefined;
@@ -86,7 +97,8 @@ export default function ReaderPage({ file, onClose }) {
   return <main ref={reader} className={`reader-shell ${focus ? 'focus-mode' : ''}`}>
     <header className="reader-header"><button className="back-button" onClick={onClose}>← <span>Library</span></button><div className="reader-file"><span>{file.name}</span><small>{APP_NAME} · private on-device reading</small></div><div className="header-progress">Page {page} / {pages}<span>{Math.round((page / pages) * 100)}%</span></div></header>
     {searchOpen && <SearchPanel pdf={pdf} onJump={(next) => { goToPage(next); }} onClose={() => { setSearchOpen(false); setSearchQuery(''); }} onQueryChange={setSearchQuery} />}
+    {tocOpen && <TocDrawer pdf={pdf} onJump={(next) => { goToPage(next); setTocOpen(false); }} onClose={() => setTocOpen(false)} onOutlineAvailable={setHasOutline} />}
     <PdfViewport pdf={pdf} settings={settings} onPageChange={setPage} startPage={targetPage} searchQuery={searchQuery} />
-    <ReaderToolbar settings={settings} setSettings={setSettings} page={page} pages={pages} goToPage={goToPage} toggleFocus={() => setFocus((value) => !value)} focus={focus} toggleFullscreen={toggleFullscreen} searchOpen={searchOpen} setSearchOpen={setSearchOpen} onPreview={applyPreview} />
+    <ReaderToolbar settings={settings} setSettings={setSettings} page={page} pages={pages} goToPage={goToPage} toggleFocus={() => setFocus((value) => !value)} focus={focus} toggleFullscreen={toggleFullscreen} searchOpen={searchOpen} setSearchOpen={setSearchOpen} onPreview={applyPreview} hasOutline={hasOutline} tocOpen={tocOpen} setTocOpen={setTocOpen} />
   </main>;
 }
