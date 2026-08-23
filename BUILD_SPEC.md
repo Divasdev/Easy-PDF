@@ -13,6 +13,10 @@ never leave the user’s device. It uses React 18, Vite, Tailwind CSS, and raw
 - The themed render cache is bounded LRU, never an unbounded per-document cache.
 - Persist only lightweight preferences and progress. To resume, a person opens
   the same PDF again; PDF bytes are not retained.
+- Persistent pen annotations added in Phase 8 (personal, local-only — see
+  PHASE8_PROMPT.md). Still out of scope: accounts, cloud sync,
+  collaboration/shared annotations, AI summarization, payments, OCR, exporting
+  a marked-up PDF.
 
 ## Progress Log
 
@@ -26,6 +30,7 @@ never leave the user’s device. It uses React 18, Vite, Tailwind CSS, and raw
 - [x] Phase 5 — Preferences and reading progress
 - [x] Phase 6 — Responsive UI, focus mode, reduced motion, errors, README
 - [x] Phase 7 — Research-driven refinement: search highlighting, ToC, bookmarks, copy
+- [ ] Phase 8 — Persistent pen annotations: pen, highlighter, circle, eraser, undo
 
 ### Session Notes
 
