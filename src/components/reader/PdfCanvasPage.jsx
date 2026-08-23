@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { paintReadingCanvas } from '../../lib/pdf/colorRemap';
+import AnnotationCanvas from './AnnotationCanvas';
 
 const MAX_SOURCE_CACHE = 12;
 const sourceCache = new Map();
@@ -26,12 +27,13 @@ function applyHighlights(container, query) {
   });
 }
 
-export default function PdfCanvasPage({ pdf, pageNumber, settings, onVisible, searchQuery }) {
+export default function PdfCanvasPage({ pdf, pageNumber, settings, onVisible, searchQuery, annotating, annoTool, annoColor, annoStrokeWidth, strokes, onStrokeComplete, onEraseStroke }) {
   const host = useRef(null);
   const canvas = useRef(null);
   const textLayer = useRef(null);
   const [inView, setInView] = useState(false);
   const [aspectRatio, setAspectRatio] = useState(1.414);
+  const [canvasDims, setCanvasDims] = useState({ w: 0, h: 0 });
   const lastCssScale = useRef(null);
 
   useEffect(() => {
@@ -66,6 +68,7 @@ export default function PdfCanvasPage({ pdf, pageNumber, settings, onVisible, se
       paintReadingCanvas(source, canvas.current, settings, key);
       canvas.current.style.width = `${viewport.width / dpr}px`;
       canvas.current.style.height = `${viewport.height / dpr}px`;
+      setCanvasDims({ w: viewport.width / dpr, h: viewport.height / dpr });
 
       /* Build the text layer overlay for selection and highlighting. */
       if (textLayer.current && cssScale !== lastCssScale.current) {
@@ -106,6 +109,18 @@ export default function PdfCanvasPage({ pdf, pageNumber, settings, onVisible, se
     {inView ? <>
       <canvas ref={canvas} />
       <div ref={textLayer} className="text-layer" />
+      <AnnotationCanvas
+        pageNumber={pageNumber}
+        annotating={annotating}
+        tool={annoTool}
+        color={annoColor}
+        strokeWidth={annoStrokeWidth}
+        strokes={strokes}
+        onStrokeComplete={onStrokeComplete}
+        onEraseStroke={onEraseStroke}
+        canvasWidth={canvasDims.w}
+        canvasHeight={canvasDims.h}
+      />
     </> : <div className="page-skeleton">Page {pageNumber}</div>}
     <span className="page-number">{pageNumber}</span>
   </article>;
